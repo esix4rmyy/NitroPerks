@@ -1,8 +1,8 @@
 /**
- * @name NitroPerks
- * @website https://github.com/respecting/NitroPerks
- * @source https://raw.githubusercontent.com/respecting/NitroPerks/main/NitroPerks.plugin.js
- * @updateUrl https://raw.githubusercontent.com/respecting/NitroPerks/main/NitroPerks.plugin.js
+ * @name Sharing Boost
+ * @website https://github.com/respecting/SharingBoost
+ * @source https://raw.githubusercontent.com/esix4rmyy/SharingBoost/main/SharingBoost.plugin.js
+ * @updateUrl https://raw.githubusercontent.com/esix4rmyy/SharingBoost/main/SharingBoost.plugin.js
  */
 /*@cc_on
 @if (@_jscript)
@@ -30,18 +30,18 @@
 module.exports = (() => {
     const config = {
         "info": {
-            "name": "NitroPerks",
+            "name": "WebRTC Sharing Boost",
             "authors": [{
-                "name": "lemons",
-                "discord_id": "407348579376693260",
-                "github_username": "respecting"
+                "name": "esix4rmyy",
+                "discord_id": "608953039184855069",
+                "github_username": "loreeee"
             }],
             "version": "1.3.6",
-            "description": "Unlock all screensharing modes, and use cross-server emotes & gif emotes, Discord wide! (You CANNOT upload 100MB files though. :/)",
-            "github": "https://github.com/respecting/NitroPerks",
-            "github_raw": "https://raw.githubusercontent.com/respecting/NitroPerks/main/NitroPerks.plugin.js"
+            "description": "Unlock all screensharing modes",
+            "github": "https://github.com/esix4rmyy/SharingBoost",
+            "github_raw": "https://raw.githubusercontent.com/esix4rmyy/SharingBoost/main/SharingBoost.plugin.js"
         },
-        "main": "NitroPerks.plugin.js"
+        "main": "SharingBoost.plugin.js"
     };
 
     return !global.ZeresPluginLibrary ? class {
@@ -84,40 +84,18 @@ module.exports = (() => {
                 Toasts,
                 PluginUtilities
             } = Api;
-            return class NitroPerks extends Plugin {
+            return class SharingBoost extends Plugin {
                 defaultSettings = {
-                    "emojiSize": "40",
                     "screenSharing": false,
-                    "emojiBypass": true,
-                    "clientsidePfp": false,
-                    "pfpUrl": "",
                 };
                 settings = PluginUtilities.loadSettings(this.getName(), this.defaultSettings);
                 originalNitroStatus = 0;
-                clientsidePfp;
                 screenShareFix;
                 getSettingsPanel() {
                     return Settings.SettingPanel.build(_ => this.saveAndUpdate(), ...[
                         new Settings.SettingGroup("Features").append(...[
                             new Settings.Switch("High Quality Screensharing", "Enable or disable 1080p/source @ 60fps screensharing. This adapts to your current nitro status.", this.settings.screenSharing, value => this.settings.screenSharing = value)
                         ]),
-                        new Settings.SettingGroup("Emojis").append(
-                            new Settings.Switch("Nitro Emotes Bypass", "Enable or disable using the Nitro Emote bypass.", this.settings.emojiBypass, value => this.settings.emojiBypass = value),
-                            new Settings.Slider("Size", "The size of the emoji in pixels. 40 is recommended.", 16, 64, this.settings.emojiSize, size=>this.settings.emojiSize = size, {markers:[16,20,32,40,64], stickToMarkers:true})
-                        ),
-                            new Settings.SettingGroup("Profile Picture").append(...[
-                                new Settings.Switch("Clientsided Profile Picture", "Enable or disable clientsided profile pictures.", this.settings.clientsidePfp, value => this.settings.clientsidePfp = value),
-                                new Settings.Textbox("URL", "The direct URL that has the profile picture you want.", this.settings.pfpUrl,
-                                    image => {
-                                        try {
-                                            new URL(image)
-                                        } catch {
-                                            return Toasts.error('This is an invalid URL!')
-                                        }
-                                        this.settings.pfpUrl = image
-                                    }
-                                )
-                            ])
                     ])
                 }
                 
@@ -154,55 +132,6 @@ module.exports = (() => {
                     }
 
                     if (this.settings.screenSharing) BdApi.clearCSS("screenShare")
-
-                    if (this.settings.emojiBypass) {
-                        //fix emotes with bad method
-                        Patcher.before(DiscordModules.MessageActions, "sendMessage", (_, [, msg]) => {
-                            msg.validNonShortcutEmojis.forEach(emoji => {
-                                if (emoji.url.startsWith("/assets/")) return;
-                                msg.content = msg.content.replace(`<${emoji.animated ? "a" : ""}${emoji.allNamesString.replace(/~\d/g, "")}${emoji.id}>`, emoji.url + `&size=${this.settings.emojiSize} `)
-                            })
-                        });
-                        //for editing message also
-                        Patcher.before(DiscordModules.MessageActions, "editMessage", (_,obj) => {
-                            let msg = obj[2].content
-                            if (msg.search(/\d{18}/g) == -1) return;
-                            msg.match(/<a:.+?:\d{18}>|<:.+?:\d{18}>/g).forEach(idfkAnymore=>{
-                                obj[2].content = obj[2].content.replace(idfkAnymore, `https://cdn.discordapp.com/emojis/${idfkAnymore.match(/\d{18}/g)[0]}?size=${this.settings.emojiSize}`)
-                            })
-                        });
-                    }
-
-                    if(!this.settings.emojiBypass) Patcher.unpatchAll(DiscordModules.MessageActions)
-
-                    if (this.settings.clientsidePfp && this.settings.pfpUrl) {
-                        this.clientsidePfp = setInterval(()=>{
-                            document.querySelectorAll(`[src="${DiscordAPI.currentUser.discordObject.avatarURL.replace(".png", ".webp")}"]`).forEach(avatar=>{
-                                avatar.src = this.settings.pfpUrl
-                            })
-                            document.querySelectorAll(`[src="${DiscordAPI.currentUser.discordObject.avatarURL}"]`).forEach(avatar=>{
-                                avatar.src = this.settings.pfpUrl
-                            })
-                            document.querySelectorAll(`.avatarContainer-28iYmV.avatar-3tNQiO.avatarSmall-1PJoGO`).forEach(avatar=>{
-                                if (!avatar.style.backgroundImage.includes(DiscordAPI.currentUser.discordObject.avatarURL)) return;
-                                avatar.style = `background-image: url("${this.settings.pfpUrl}");`
-                            })
-                        }, 100)
-                    }
-                    if (!this.settings.clientsidePfp) this.removeClientsidePfp()
-                }
-                removeClientsidePfp() {
-                    clearInterval(this.clientsidePfp)
-                    document.querySelectorAll(`[src="${this.settings.pfpUrl}"]`).forEach(avatar=>{
-                        avatar.src = DiscordAPI.currentUser.discordObject.avatarURL
-                    })
-                    document.querySelectorAll(`[src="${this.settings.pfpUrl}"]`).forEach(avatar=>{
-                        avatar.src = DiscordAPI.currentUser.discordObject.avatarURL
-                    })
-                    document.querySelectorAll(`.avatarContainer-28iYmV.avatar-3tNQiO.avatarSmall-1PJoGO`).forEach(avatar=>{
-                        if (!avatar.style.backgroundImage.includes(this.settings.pfpUrl)) return;
-                        avatar.style = `background-image: url("${DiscordAPI.currentUser.discordObject.avatarURL}");`
-                    })
                 }
                 onStart() {
                     this.originalNitroStatus = DiscordAPI.currentUser.discordObject.premiumType;
